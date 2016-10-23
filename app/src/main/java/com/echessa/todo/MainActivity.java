@@ -58,16 +58,45 @@ public class MainActivity extends AppCompatActivity {
             button.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     Item item = new Item(text.getText().toString());
-                    mDatabase.child("users").child(mUserId).child("items").push().setValue(item);
+                    Location location = new Location(text.getText().toString(),"60");
+                    //mDatabase.child("users").child(mUserId).child("items").push().setValue(item);
+                    mDatabase.child("data").child("locations").push().setValue(location);
                     text.setText("");
                 }
             });
 
             // Use Firebase to populate the list.
-            mDatabase.child("users").child(mUserId).child("items").addChildEventListener(new ChildEventListener() {
+//            mDatabase.child("users").child(mUserId).child("items").addChildEventListener(new ChildEventListener() {
+//                @Override
+//                public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+//                    adapter.add((String) dataSnapshot.child("title").getValue());
+//                }
+//
+//                @Override
+//                public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+//
+//                }
+//
+//                @Override
+//                public void onChildRemoved(DataSnapshot dataSnapshot) {
+//                    adapter.remove((String) dataSnapshot.child("title").getValue());
+//                }
+//
+//                @Override
+//                public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+//
+//                }
+//
+//                @Override
+//                public void onCancelled(DatabaseError databaseError) {
+//
+//                }
+//            });
+
+            mDatabase.child("data").child("locations").addChildEventListener(new ChildEventListener() {
                 @Override
                 public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                    adapter.add((String) dataSnapshot.child("title").getValue());
+                    adapter.add(dataSnapshot.child("lat").getValue() + ", " + dataSnapshot.child("lng").getValue());
                 }
 
                 @Override
@@ -77,7 +106,7 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onChildRemoved(DataSnapshot dataSnapshot) {
-                    adapter.remove((String) dataSnapshot.child("title").getValue());
+                    adapter.remove((String) dataSnapshot.child("lat").getValue());
                 }
 
                 @Override
@@ -92,11 +121,32 @@ public class MainActivity extends AppCompatActivity {
             });
 
             // Delete items when clicked
+//            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+//                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+//                    mDatabase.child("users").child(mUserId).child("items")
+//                            .orderByChild("title")
+//                            .equalTo((String) listView.getItemAtPosition(position))
+//                            .addListenerForSingleValueEvent(new ValueEventListener() {
+//                                @Override
+//                                public void onDataChange(DataSnapshot dataSnapshot) {
+////                                    if (dataSnapshot.hasChildren()) {
+////                                        DataSnapshot firstChild = dataSnapshot.getChildren().iterator().next();
+////                                        firstChild.getRef().removeValue();
+////                                    }
+//                                }
+//
+//                                @Override
+//                                public void onCancelled(DatabaseError databaseError) {
+//
+//                                }
+//                            });
+//                }
+//            });
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    mDatabase.child("users").child(mUserId).child("items")
-                            .orderByChild("title")
-                            .equalTo((String) listView.getItemAtPosition(position))
+                    mDatabase.child("data").child("locations")
+                            .orderByChild("lat")
+                            .equalTo((String) listView.getItemAtPosition(position)) //need to find out how to delete with new lat, lng display
                             .addListenerForSingleValueEvent(new ValueEventListener() {
                                 @Override
                                 public void onDataChange(DataSnapshot dataSnapshot) {

@@ -1,7 +1,10 @@
 package com.echessa.todo;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
@@ -12,6 +15,9 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.location.LocationManager;
+import android.location.LocationListener;
+import android.widget.Toast;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -36,6 +42,54 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        class MyLocationListener implements LocationListener {
+
+            public void onLocationChanged(android.location.Location loc) {
+                Context context = getApplicationContext();
+                String message = String.format(
+                        "New FireLocation \n Longitude: %1$s \n Latitude: %2$s",
+                       loc.getLongitude(), loc.getLatitude()
+                );
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+            }
+
+            public void onProviderDisabled(String arg0) {
+
+            }
+
+            public void onProviderEnabled(String provider) {
+
+            }
+
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+
+            }
+        }
+
+        //Create location listener
+        final LocationManager mLocManager = (LocationManager) getSystemService(this.LOCATION_SERVICE);
+        final LocationListener mLocListener = new MyLocationListener();
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            Context context = getApplicationContext();
+            String message = String.format(
+                    "No Permissions" );
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+        } else {
+            Context context = getApplicationContext();
+            String message = String.format(
+                    "Request Updates" );
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+            mLocManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mLocListener);
+        }
+
+
         // Initialize Firebase Auth and Database Reference
         mFirebaseAuth = FirebaseAuth.getInstance();
         mFirebaseUser = mFirebaseAuth.getCurrentUser();
@@ -57,11 +111,33 @@ public class MainActivity extends AppCompatActivity {
             final Button button = (Button) findViewById(R.id.addButton);
             button.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
-                    Item item = new Item(text.getText().toString());
-                    Location location = new Location(text.getText().toString(),"60");
-                    //mDatabase.child("users").child(mUserId).child("items").push().setValue(item);
-                    mDatabase.child("data").child("locations").push().setValue(location);
-                    text.setText("");
+                    Context context = getApplicationContext();
+                    String message = String.format(
+                            "Button Pushed" );
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+                    if (ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        // TODO: Consider calling
+                        //    ActivityCompat#requestPermissions
+                        // here to request the missing permissions, and then overriding
+                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                        //                                          int[] grantResults)
+                        // to handle the case where the user grants the permission. See the documentation
+                        // for ActivityCompat#requestPermissions for more details.
+                        message = String.format(
+                                "No Permissions" );
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+                    } else {
+                        message = String.format(
+                                "Location Found" );
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+                        android.location.Location location = mLocManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                        FireLocation fire_location = new FireLocation(String.valueOf(location.getLatitude()), String.valueOf(location.getLongitude()));
+                        mDatabase.child("data").child("locations").child(mUserId).setValue(fire_location);
+                        //Item item = new Item(text.getText().toString());
+                        //mDatabase.child("users").child(mUserId).child("items").push().setValue(item);
+                        text.setText("");
+                    }
+
                 }
             });
 
@@ -93,20 +169,29 @@ public class MainActivity extends AppCompatActivity {
 //                }
 //            });
 
+            //need better way of updating list when a user updates their location
+            //callbacks are working, just hard to work with a list to show this
             mDatabase.child("data").child("locations").addChildEventListener(new ChildEventListener() {
+                public String last_added;
                 @Override
                 public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                    adapter.add(dataSnapshot.child("lat").getValue() + ", " + dataSnapshot.child("lng").getValue());
+                    last_added = dataSnapshot.child("lat").getValue() + ", " + dataSnapshot.child("lng").getValue();
+                    adapter.add(last_added);
                 }
 
                 @Override
                 public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-
+                    //need to only change the one that matches the user id?! How to reget the database?
+                    if(last_added.isEmpty() == false) {
+                        adapter.remove(last_added);
+                        last_added = dataSnapshot.child("lat").getValue() + ", " + dataSnapshot.child("lng").getValue();
+                        adapter.add(last_added);
+                    }
                 }
 
                 @Override
                 public void onChildRemoved(DataSnapshot dataSnapshot) {
-                    adapter.remove((String) dataSnapshot.child("lat").getValue());
+                    adapter.remove((String) dataSnapshot.child("lat").getValue() + ", " + dataSnapshot.child("lng").getValue());
                 }
 
                 @Override
@@ -143,16 +228,18 @@ public class MainActivity extends AppCompatActivity {
 //                }
 //            });
             listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    mDatabase.child("data").child("locations")
-                            .orderByChild("lat")
-                            .equalTo((String) listView.getItemAtPosition(position)) //need to find out how to delete with new lat, lng display
+                public void onItemClick(final AdapterView<?> parent, final View view, int position, long id) {
+                    //careful this deletes the user's data even when one clicks the other user's location
+                    mDatabase.child("data").child("locations").child(mUserId)
+                            //need to find out how to delete with new lat, lng display
                             .addListenerForSingleValueEvent(new ValueEventListener() {
                                 @Override
                                 public void onDataChange(DataSnapshot dataSnapshot) {
                                     if (dataSnapshot.hasChildren()) {
-                                        DataSnapshot firstChild = dataSnapshot.getChildren().iterator().next();
-                                        firstChild.getRef().removeValue();
+                                        DatabaseReference ref = dataSnapshot.getRef();
+                                        if( ref.getKey() == mUserId ) {
+                                            ref.removeValue();
+                                        }
                                     }
                                 }
 

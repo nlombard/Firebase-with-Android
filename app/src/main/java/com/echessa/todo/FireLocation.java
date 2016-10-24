@@ -1,15 +1,15 @@
 package com.echessa.todo;
 
 
-public class Location {
+public class FireLocation {
 
     private String lat;
 
     private String lng;
 
-    public Location() {}
+    public FireLocation() {}
 
-    public Location(String lat, String lng) {
+    public FireLocation(String lat, String lng) {
         this.lat = lat;
         this.lng = lng;
     }
